@@ -21,14 +21,15 @@ endif
 let g:loaded_TagHLBufferEntry = 1
 
 function! TagHighlight#BufferEntry#AutoSource()
-  let searchresult = TagHighlight#Find#LocateFile('AUTOSOURCE', '')
+  let l:searchresult = TagHighlight#Find#LocateFile('AUTOSOURCE', '')
   " COMBAK If the '== 1' just means true and it doesn't mean anything else like
   " the amount, the '== 1' can be taken out.
-  if searchresult['Found'] == 1 && searchresult['Exists'] == 1
-    exe 'source' searchresult['FullPath']
+  if l:searchresult['Found'] == 1 && l:searchresult['Exists'] == 1
+    exe 'source' l:searchresult['FullPath']
   endif
 endfunction
 
+" XXX Is a:filename not being used?...
 function! TagHighlight#BufferEntry#BufEnter(filename)
   if !exists('b:TagHighlightPrivate')
     let b:TagHighlightPrivate = {}
@@ -57,6 +58,7 @@ function! TagHighlight#BufferEntry#BufEnter(filename)
   let b:TagHighlightPrivate['BufEnterInitialised'] = 1
 endfunction
 
+" XXX Is a:filename not being used?...
 function! TagHighlight#BufferEntry#BufLeave(filename)
   if !exists('b:TagHighlightPrivate')
     let b:TagHighlightPrivate = {}
@@ -74,22 +76,22 @@ function! TagHighlight#BufferEntry#BufLeave(filename)
 endfunction
 
 function! TagHighlight#BufferEntry#SetupVars()
-  let custom_globals = TagHighlight#Option#GetOption('CustomGlobals')
-  let custom_settings = TagHighlight#Option#GetOption('CustomSettings')
+  let l:custom_globals  = TagHighlight#Option#GetOption('CustomGlobals')
+  let l:custom_settings = TagHighlight#Option#GetOption('CustomSettings')
 
-  let custom_vars = {}
-  for var in keys(custom_globals)
-    let custom_vars['g:'.var] = custom_globals[var]
+  let l:custom_vars = {}
+  for l:var in keys(l:custom_globals)
+    let l:custom_vars['g:' . l:var] = l:custom_globals[l:var]
   endfor
 
-  for var in keys(custom_settings)
-    let custom_vars['&'.var] = custom_settings[var]
+  for l:var in keys(l:custom_settings)
+    let l:custom_vars['&' . l:var] = l:custom_settings[l:var]
   endfor
 
   let s:saved_state = {}
-  for var in keys(custom_vars)
-    let s:saved_state[var] = exists(var) ? eval(var) : 'DOES NOT EXISTS'
-    exe 'let' var '= custom_vars[var]'
+  for l:var in keys(l:custom_vars)
+    let s:saved_state[l:var] = exists(l:var) ? eval(l:var) : 'DOES NOT EXISTS'
+    exe 'let' l:var '= custom_vars[var]'
   endfor
 endfunction
 
@@ -98,12 +100,10 @@ function! TagHighlight#BufferEntry#ResetVars()
     return
   endif
 
-  for var in keys(s:saved_state)
+  for l:var in keys(s:saved_state)
     " The '==?' means case doesn't matter
-    if s:saved_state[var] ==? 'DOES NOT EXIST'
-      exe 'unlet' var
-    else
-      exe 'let' var '= s:saved_state[var]'
-    endif
+    execute s:saved_state[l:var] ==? 'DOES NOT EXIST'
+          \ ? 'unlet ' . l:var
+          \ : 'let ' . l:var . ' = s:saved_state[var]'
   endfor
 endfunction

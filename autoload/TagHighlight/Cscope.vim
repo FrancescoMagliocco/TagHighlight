@@ -24,28 +24,29 @@ endif
 let g:loaded_TagHLCscope = 1
 
 function TagHighlight#Cscope#GetConnections()
-  let result = {}
+  let l:result = {}
 
-  redir => connections
+  redir => l:connections
   silent cs show
   redir END
 
-  let lines = split(connections, '\n')
-  for entry in lines
-    let matches = matchlist(entry, '^\s*\(\d\+\)\s\+\(\d\+\)\s\+\(\k\+\).*')
-    if len(matches) >= 4
-      " Just store the path (likely to be inconclusive due to lack of
-      " explicit path in "cs show" output)
-      let result[matches[1]] = matches[3]
+  for l:entry in split(l:connections, '\n')
+    let l:matches = matchlist(l:entry, '^\s*\(\d\+\)\s\+\(\d\+\)\s\+\(\k\+\).*')
+    if len(l:matches) < 4
+      continue
     endif
+
+    " Just store the path (likely to be inconclusive due to lack of
+    " explicit path in "cs show" output)
+    let l:result[l:matches[1]] = l:matches[3]
   endfor
 
-  return result
+  return l:result
 endfunction
 
 function! TagHighlight#Cscope#RestoreConnections(connections)
-  for index in keys(a:connections)
-    exe 'silent cs add' a:connections[index]
+  for l:index in keys(a:connections)
+    exe 'silent cs add' a:connections[l:index]
   endfor
 endfunction
 
@@ -68,8 +69,9 @@ function! TagHighlight#Cscope#ResumeCscope()
   else
     let b:TagHighlightPrivate['CscopeFileInfo'] =
           \ TagHighlight#Find#LocateFile('CSCOPE', '')
-    if b:TagHighlightPrivate['CscopeFileInfo']['Exists']
-      exe 'silent cs add' b:TagHighlightPrivate['CscopeFileInfo']['FullPath']
+    let l:CscopeFileInfo = b:TagHighlightPrivate['CscopeFileInfo']
+    if l:CscopeFileInfo['Exists']
+      exe 'silent cs add' l:CscopeFileInfo['FullPath']
     else
       call TagHighlight#Cscope#RestoreConnections(s:PausedConnections)
     endif
@@ -87,42 +89,45 @@ function! TagHighlight#Cscope#BufEnter()
           \ TagHighlight#Find#LocateFile('CSCOPE', '')
   endif
 
-  if b:TagHighlightPrivate['CscopeFileInfo']['Exists']
-    exe 'silent cs add' b:TagHighlightPrivate['CscopeFileInfo']['FullPath']
+  let l:CscopeFileInfo = b:TagHighlightPrivate['CscopeFileInfo']
+  if l:CscopeFileInfo['Exists']
+    exe 'silent cs add' l:CscopeFileInfo['FullPath']
   endif
 endfunction
 
 function! TagHighlight#Cscope#BufLeave()
   silent cs kill -1
   if has_key(b:TagHighlightPrivate, 'StoredCscopeConnections')
-    if len(b:TagHighlightPrivate['StoredCscopeConnections'])
-      call TagHighlight#Cscope#RestoreConnections(
-            \ b:TagHighlightPrivate['StoredCscopeConnections'])
+    let l:StoredCscopeConnections =
+          \ g:TagHighlightPrivate['StoredCscopeConnections']
+    if len(l:StoredCscopeConnections)
+      call TagHighlight#Cscope#RestoreConnections(l:StoredCscopeConnections)
     endif
   endif
 endfunction
 
 function! TagHighlight#Cscope#FindCscopeExe()
   " Find the cscope path
-  let cscope_option = TagHighlight#Option#GetOption('CscopeExecutable')
-  if cscope_option ==? 'None'
-    let cscope_options = len(&cscopeprg) ? &cscopeprg : 'cscope'
+  let l:cscope_option = TagHighlight#Option#GetOption('CscopeExecutable')
+  if l:cscope_option ==? 'None'
+    let l:cscope_options = len(&cscopeprg) ? &cscopeprg : 'cscope'
   endif
 
-  if cscope_option =~? '[\\/]'
+  if l:cscope_option =~? '[\\/]'
     " Option set and includes '/' or '\': must be explicit
     " path to named executable: just pass to mktypes
     call TagHLDebug(
           \ 'CscopeExecutable set with path delimiter, using as explicit path',
           \ 'Information')
-    let b:TagHighlightSettings['CscopeExeFull'] = cscope_option
-  else
-    " Option set but doesn't include path separator: search
-    " in the path
-    call TagHLDebug(
-          \ 'CscopeExecutable set without path delimiter, searching in path',
-          \ 'Information')
-    let b:TagHighlightSettings['CscopeExeFull'] =
-          \ TagHighlight#RunPythonScript#FindExeInPath(cscope_option)
+    let b:TagHighlightSettings['CscopeExeFull'] = l:cscope_option
+    return
   endif
+
+  " Option set but doesn't include path separator: search
+  " in the path
+  call TagHLDebug(
+        \ 'CscopeExecutable set without path delimiter, searching in path',
+        \ 'Information')
+  let b:TagHighlightSettings['CscopeExeFull'] =
+        \ TagHighlight#RunPythonScript#FindExeInPath(l:cscope_option)
 endfunction
