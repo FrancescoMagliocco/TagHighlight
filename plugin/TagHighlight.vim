@@ -73,34 +73,36 @@ function! s:LoadLanguages()
   let g:TagHighlightPrivate['SpecialSyntaxHandlers']  = {}
   " Hopefully the order doesn't matter and the split(glob(.. HAS to be done
   " before initializing some of the entries..
-  for language_file in split(glob(
+  for l:language_file in split(glob(
         \ g:TagHighlightPrivate['PluginPath'] . '/data/languages/*.txt'), '\n')
-    let entries = TagHighlight#LoadDataFile#LoadFile(language_file)
-    if has_key(entries, 'Suffix')
-          \ && has_key(entries, 'VimExtensionMatcher') 
-          \ && has_key(entries, 'VimFileTypes')
-          \ && has_key(entries, 'VimSyntaxes')
-      let g:TagHighlightPrivate['ExtensionLookup'][entries[
-            \ 'VimExtensionMatcher']] = entries['Suffix']
+    let l:entries = TagHighlight#LoadDataFile#LoadFile(l:language_file)
+    if has_key(l:entries, 'Suffix')
+          \ && has_key(l:entries, 'VimExtensionMatcher') 
+          \ && has_key(l:entries, 'VimFileTypes')
+          \ && has_key(l:entries, 'VimSyntaxes')
+      let l:Suffix = l:entries['Suffix']
+      let g:TagHighlightPrivate['ExtensionLookup'][l:entries[
+            \ 'VimExtensionMatcher']] = l:Suffix
 
-      let ftkey = type(entries['VimFileTypes']) == v:t_list
-            \ ? join(entries['VimFileTypes'], ',')
-            \ : entries['VimFileTypes']
-      let g:TagHighlightPrivate['FileTypeLookup'][ftkey] = entries['Suffix']
+      let l:VimFts = l:entries['VimFileTypes']
+      let g:TagHighlightPrivate['FileTypeLookup'][type(l:VimFts) == v:t_list
+            \ ? join(l:VimFts, ',')
+            \ : l:VimFts] = l:Suffix
 
-      let stkey = type(entries['VimSyntaxes']) == v:t_list
-            \ ? join(entries['VimSyntaxes'], ',')
-            \ : entries['VimSyntaxes']
-      let g:TagHighlightPrivate['SyntaxLookup'][stkey] = entries['Suffix']
+      let l:VimSyntaxes = l:entries['VimSyntaxes']
+      let g:TagHighlightPrivate['SyntaxLookup'][type(l:VimSyntaxes) == v:t_list
+            \ ? join(l:VimSyntaxes, ',')
+            \ : l:VimSyntaxes] = l:Suffix
     else
-      echoerr 'Could not load language from file' language_file
+      echoerr 'Could not load language from file' l:language_file
     endif
 
-    if has_key(entries, 'SpecialSyntaxHandlers')
-      let g:TagHighlightPrivate['SpecialSyntaxHandlers'][entries['Suffix']] =
-            \ type(entries['SpecialSyntaxHandlers']) == v:t_list
-            \   ? entries['SpecialSyntaxHandlers']
-            \   : [entries['SpecialSyntaxHandlers']]
+    if has_key(l:entries, 'SpecialSyntaxHandlers')
+      let l:SpecialSyntaxHandlers = l:entries['SpecialSyntaxHandlers']
+      let g:TagHighlightPrivate['SpecialSyntaxHandlers'][l:Suffix] =
+            \ type(l:SpecialSyntaxHandlers) == v:t_list
+            \   ? l:SpecialSyntaxHandlers
+            \   : [l:SpecialSyntaxHandlers]
     endif
   endfor
 endfunction
@@ -111,38 +113,36 @@ function! s:LoadKinds()
   let g:TagHighlightPrivate['Kinds'] =
         \ TagHighlight#LoadDataFile#LoadDataFile('kinds.txt')
   " Use a dictionary to get all unique entries
-  let tag_names_dict = {}
-  for entry in keys(g:TagHighlightPrivate['Kinds'])
-    for key in keys(g:TagHighlightPrivate['Kinds'][entry])
-      let tag_names_dict[g:TagHighlightPrivate['Kinds'][entry][key]] = ''
+  let l:tag_names_dict = {}
+  let l:Kinds = g:TagHighlightPrivate['Kinds']
+  for l:entry in keys(l:Kinds)
+    for l:key in keys(l:Kinds[l:entry])
+      let l:tag_names_dict[l:Kinds[l:entry][l:key]] = ''
     endfor
   endfor
 
-  let g:TagHighlightPrivate['AllTypes'] = sort(keys(tag_names_dict))
+  let g:TagHighlightPrivate['AllTypes'] = sort(keys(l:tag_names_dict))
 endfunction
 
 function! TagHLDebug(str, level)
   if !g:TagHighlight_Debug | return | endif
   if TagHighlight#Debug#DebugLevelIncludes(a:level)
     try
-      let debug_file = TagHighlight#Option#GetOption('DebugFile')
-      let print_time = TagHighlight#Option#GetOption('DebugPrintTime')
+      let l:debug_file = TagHighlight#Option#GetOption('DebugFile')
+      let l:print_time = TagHighlight#Option#GetOption('DebugPrintTime')
     catch /Unrecognised option/
       " Probably haven't loaded the option definitions
       " yet, so assume no debug log file
-      let debug_file = 0
+      let l:debug_file = 0
     endtry
 
-    if !debug_file
+    if !l:debug_file
       echomsg a:str
     else
-      exe 'redir >>' debug_file
-      if print_time && exists('*strftime')
-        silent echo strftime('%H.%M.%S') . ': ' . a:str
-      else
-        silent echo a:str
-      endif
-
+      exe 'redir >>' l:debug_file
+      silent echo l:print_time && exists('*strftime')
+            \ ? strftime('%H.%M.%S') . ': ' . a:str
+            \ : a:str
       redir END
     endif
   endif
@@ -161,18 +161,18 @@ endfunction
 call s:LoadLanguages()
 call s:LoadKinds()
 
-for f in split(globpath(&rtp, 'TagHLConfig.txt'), '\n')
-  call s:LoadTagHLConfig(f, 0)
+for s:f in split(globpath(&rtp, 'TagHLConfig.txt'), '\n')
+  call s:LoadTagHLConfig(s:f, 0)
 endfor
 
 command! -nargs=1 -complete=file LoadTagHLConfig
       \ call s:LoadTagHLConfig(<q-args>, 1)
 
-for tagname in g:TagHighlightPrivate['AllTypes']
-  let simplename = substitute(tagname, '^CTags', '', '')
-  exe 'hi default link' tagname simplename
+for s:tagname in g:TagHighlightPrivate['AllTypes']
+  let s:simplename = substitute(s:tagname, '^CTags', '', '')
+  exe 'hi default link' s:tagname s:simplename
   " Highlight everything as a keyword by default
-  exe 'hi default link' simplename 'Keyword'
+  exe 'hi default link' s:simplename 'Keyword'
 endfor
 
 if !has_key(g:TagHighlightPrivate, 'AutoCommandsLoaded')
