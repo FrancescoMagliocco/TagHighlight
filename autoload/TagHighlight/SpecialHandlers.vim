@@ -11,37 +11,41 @@
 "            of this software.
 
 " ---------------------------------------------------------------------
-try
-  if &cp || v:version < 700 || (exists('g:loaded_TagHLSpecialHandlers') && (g:plugin_development_mode != 1))
-    throw "Already loaded"
-  endif
-catch
+if !exists('g:loaded_TagHighlight') || (exists('g:loaded_TagHLSpecialHandlers')
+      \ && (g:plugin_development_mode != 1))
   finish
-endtry
+endif
 let g:loaded_TagHLSpecialHandlers = 1
 
 function! TagHighlight#SpecialHandlers#CRainbowHandler()
-  call TagHLDebug("Language handler for rainbow.vim compatibility", "Information")
-  if exists("b:hlrainbow") && ! exists("g:nohlrainbow")
+  call TagHLDebug(
+        \ 'Language handler for rainbow.vim compatibility', 'Information')
+  if exists('b:hlrainbow') && !exists('g:nohlrainbow')
     " Use a dictionary as a set (a unique item list)
     let hl_dict = {}
-    for key in ["c","c++"]
+    for key in ['c', 'c++']
       if has_key(g:TagHighlightPrivate['Kinds'], key)
         for kind in values(g:TagHighlightPrivate['Kinds'][key])
-          let hl_dict[kind] = ""
+          let hl_dict[kind] = ''
         endfor
       endif
     endfor
     let all_kinds = keys(hl_dict)
-    for cluster in ["cBracketGroup","cCppBracketGroup","cCurlyGroup","cParenGroup","cCppParenGroup"]
+    for cluster in [
+          \ 'cBracketGroup',
+          \ 'cCppBracketGroup',
+          \ 'cCurlyGroup',
+          \ 'cParenGroup',
+          \ 'cCppParenGroup']
       exe 'syn cluster' cluster 'add=' . join(all_kinds, ',')
     endfor
   endif
 endfunction
 
 function! TagHighlight#SpecialHandlers#JavaTopHandler()
-  call TagHLDebug("Language handler for javaTop compatibility", "Information")
+  call TagHLDebug('Language handler for javaTop compatibility', 'Information')
   if has_key(g:TagHighlightPrivate['Kinds'], 'java')
-    exe 'syn cluster javaTop add=' . join(values(g:TagHighlightPrivate['Kinds']['java']), ',')
+    exe 'syn cluster javaTop add=' . join(
+          \ values(g:TagHighlightPrivate['Kinds']['java']), ',')
   endif
 endfunction

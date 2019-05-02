@@ -11,22 +11,21 @@
 "            of this software.
 
 " ---------------------------------------------------------------------
-try
-  if &cp || v:version < 700 || (exists('g:loaded_TagHLDebug') && (g:plugin_development_mode != 1))
-    throw "Already loaded"
-  endif
-catch
+if !exists('g:loaded_TagHighlight')
+      \ || (exists('g:loaded_TagHLDebug') && g:plugin_development_mode != 1)
+      \ || (exists('g:TagHighlight_Debug') && g:TagHighlight_Debug)
   finish
-endtry
+endif
+
 let g:loaded_TagHLDebug = 1
 
 let TagHighlight#Debug#DebugLevels = [
-      \ "None",
-      \ "Critical",
-      \ "Error",
-      \ "Warning",
-      \ "Status",
-      \ "Information",
+      \ 'None',
+      \ 'Critical',
+      \ 'Error',
+      \ 'Warning',
+      \ 'Status',
+      \ 'Information',
       \ ]
 
 function! TagHighlight#Debug#GetDebugLevel()
@@ -38,16 +37,13 @@ function! TagHighlight#Debug#GetDebugLevel()
     let debug_level = 'Information'
   endtry
   let debug_num = index(g:TagHighlight#Debug#DebugLevels, debug_level)
-  if debug_num != -1
-    return debug_num
-  else
-    return index(g:TagHighlight#Debug#DebugLevels, 'Error')
-  endif
+  return debug_num != -1
+        \ ? debug_num
+        \ : index(g:TagHighlight#Debug#DebugLevels, 'Error')
 endfunction
 
 function! TagHighlight#Debug#GetDebugLevelName()
-  let debug_level_num = TagHighlight#Debug#GetDebugLevel()
-  return g:TagHighlight#Debug#DebugLevels[debug_level_num]
+  return g:TagHighlight#Debug#DebugLevels[TagHighlight#Debug#GetDebugLevel()]
 endfunction
 
 function! TagHighlight#Debug#DebugLevelIncludes(level)
@@ -55,11 +51,8 @@ function! TagHighlight#Debug#DebugLevelIncludes(level)
   if level_index == -1
     let level_index = index(g:TagHighlight#Debug#DebugLevels, 'Critical')
   endif
-  if level_index <= TagHighlight#Debug#GetDebugLevel()
-    return 1
-  else
-    return 0
-  endif
+
+  return level_index <= TagHighlight#Debug#GetDebugLevel()
 endfunction
 
 function! TagHighlight#Debug#DebugUpdateTypesFile(reset, filename)
@@ -74,37 +67,41 @@ function! TagHighlight#Debug#DebugUpdateTypesFile(reset, filename)
     endif
   endif
 
-  let debug_options = ["DebugFile","DebugLevel"]
+  let debug_options = ['DebugFile','DebugLevel']
 
   " Store the old debug options
   for dbg_option in debug_options
-    let stored_option_name = 'Stored'.dbg_option
-    if has_key(g:TagHighlightSettings, dbg_option)
-      let g:TagHighlightSettings[stored_option_name] = g:TagHighlightSettings[dbg_option]
-    else
-      let g:TagHighlightSettings[stored_option_name] = 'None'
-    endif
+    let g:TagHighlightSettings['Stored'.dbg_option] =
+          \ has_key(g:TagHighlightSettings, dbg_option)
+          \   ? g:TagHighlightSettings[dbg_option]
+          \   : 'None'
   endfor
 
-  let g:TagHighlightSettings['DebugFile'] = debug_file
-  let g:TagHighlightSettings['DebugLevel'] = 'Information'
+  let g:TagHighlightSettings['DebugFile']   = debug_file
+  let g:TagHighlightSettings['DebugLevel']  = 'Information'
 
-  call TagHLDebug("========================================================", "Information")
+  call TagHLDebug(
+        \ '========================================================',
+        \ 'Information')
   redir => vim_version_info
   silent version
   redir END
-  call TagHLDebug("--------------------------------------------------------", "Information")
-  call TagHLDebug(vim_version_info, "Information")
+  call TagHLDebug(
+        \ '--------------------------------------------------------',
+        \ 'Information')
+  call TagHLDebug(vim_version_info, 'Information')
   call TagHighlight#Generation#UpdateAndRead(0)
 
   " Get rid of the 'stored' versions of the debug options
   for dbg_option in debug_options
     let stored_option_name = 'Stored'.dbg_option
-    if g:TagHighlightSettings[stored_option_name] == 'None'
+    if g:TagHighlightSettings[stored_option_name] ==? 'None'
       unlet g:TagHighlightSettings[dbg_option]
     else
-      let g:TagHighlightSettings[dbg_option] = g:TagHighlightSettings[stored_option_name]
+      let g:TagHighlightSettings[dbg_option] =
+            \ g:TagHighlightSettings[stored_option_name]
     endif
+
     unlet g:TagHighlightSettings[stored_option_name]
   endfor
 endfunction

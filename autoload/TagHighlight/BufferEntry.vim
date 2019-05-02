@@ -12,34 +12,40 @@
 
 " ---------------------------------------------------------------------
 
-try
-  if &cp || v:version < 700 || (exists('g:loaded_TagHLBufferEntry') && (g:plugin_development_mode != 1))
-    throw "Already loaded"
-  endif
-catch
+if !exists('g:loaded_TagHighlight')
+      \ || (exists('g:loaded_TagHLBufferEntry')
+      \ && (g:plugin_development_mode != 1))
   finish
-endtry
+endif
+
 let g:loaded_TagHLBufferEntry = 1
 
 function! TagHighlight#BufferEntry#AutoSource()
   let searchresult = TagHighlight#Find#LocateFile('AUTOSOURCE', '')
+  " COMBAK If the '== 1' just means true and it doesn't mean anything else like
+  " the amount, the '== 1' can be taken out.
   if searchresult['Found'] == 1 && searchresult['Exists'] == 1
     exe 'source' searchresult['FullPath']
   endif
 endfunction
 
 function! TagHighlight#BufferEntry#BufEnter(filename)
-  if ! exists('b:TagHighlightPrivate')
+  if !exists('b:TagHighlightPrivate')
     let b:TagHighlightPrivate = {}
   endif
-  if ! has_key(b:TagHighlightPrivate, 'ReadTypesCompleted')
+
+  if !has_key(b:TagHighlightPrivate, 'ReadTypesCompleted')
     " In case it hasn't already been run, run the extension
     " checker.
     call TagHighlight#ReadTypes#ReadTypesByExtension()
   endif
 
-  if TagHighlight#Option#GetOption('EnableCscope')
-    call TagHighlight#Cscope#BufEnter()
+  " No point in using the extra cpu cyles to check for the optoin if it's not
+  " supported.
+  if has('cscope')
+    if TagHighlight#Option#GetOption('EnableCscope')
+      call TagHighlight#Cscope#BufEnter()
+    endif
   endif
 
   if TagHighlight#Option#GetOption('AutoSource')
@@ -52,12 +58,14 @@ function! TagHighlight#BufferEntry#BufEnter(filename)
 endfunction
 
 function! TagHighlight#BufferEntry#BufLeave(filename)
-  if ! exists('b:TagHighlightPrivate')
+  if !exists('b:TagHighlightPrivate')
     let b:TagHighlightPrivate = {}
   endif
 
-  if TagHighlight#Option#GetOption('EnableCscope')
-    call TagHighlight#Cscope#BufLeave()
+  if has('cscope')
+    if TagHighlight#Option#GetOption('EnableCscope')
+      call TagHighlight#Cscope#BufLeave()
+    endif
   endif
 
   call TagHighlight#BufferEntry#ResetVars()
@@ -73,28 +81,26 @@ function! TagHighlight#BufferEntry#SetupVars()
   for var in keys(custom_globals)
     let custom_vars['g:'.var] = custom_globals[var]
   endfor
+
   for var in keys(custom_settings)
     let custom_vars['&'.var] = custom_settings[var]
   endfor
 
   let s:saved_state = {}
   for var in keys(custom_vars)
-    if exists(var)
-      let s:saved_state[var] = eval(var)
-    else
-      let s:saved_state[var] = 'DOES NOT EXIST'
-    endif
+    let s:saved_state[var] = exists(var) ? eval(var) : 'DOES NOT EXISTS'
     exe 'let' var '= custom_vars[var]'
   endfor
 endfunction
 
 function! TagHighlight#BufferEntry#ResetVars()
-  if ! exists('s:saved_state')
+  if !exists('s:saved_state')
     return
   endif
 
   for var in keys(s:saved_state)
-    if s:saved_state[var] == 'DOES NOT EXIST'
+    " The '==?' means case doesn't matter
+    if s:saved_state[var] ==? 'DOES NOT EXIST'
       exe 'unlet' var
     else
       exe 'let' var '= s:saved_state[var]'

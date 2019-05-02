@@ -11,13 +11,10 @@
 "            of this software.
 
 " ---------------------------------------------------------------------
-try
-  if &cp || v:version < 700 || (exists('g:loaded_TagHLVersion') && (g:plugin_development_mode != 1))
-    throw "Already loaded"
-  endif
-catch
+if !exists('g:loaded_TagHighlight') || (exists('g:loaded_TagHLVersion')
+      \ && (g:plugin_development_mode != 1))
   finish
-endtry
+endif
 let g:loaded_TagHLVersion = 1
 
 function! TagHighlight#Version#LoadVersionInfo()
@@ -28,11 +25,14 @@ function! TagHighlight#Version#LoadVersionInfo()
   let g:TagHighlightPrivate['PluginVersion'] = {}
   
   let last_release_info = TagHighlight#LoadDataFile#LoadDataFile('release.txt')
-  let g:TagHighlightPrivate['PluginVersion']['LastRelease'] = last_release_info['release']
+  let g:TagHighlightPrivate['PluginVersion']['LastRelease'] =
+        \ last_release_info['release']
 
   try
-    let release_version_info = TagHighlight#LoadDataFile#LoadDataFile('version_info.txt')
-    let g:TagHighlightPrivate['PluginVersion']['VersionInfo'] = release_version_info
+    let release_version_info =
+          \ TagHighlight#LoadDataFile#LoadDataFile('version_info.txt')
+    let g:TagHighlightPrivate['PluginVersion']['VersionInfo'] =
+          \ release_version_info
   catch /^Vim\%((\a\+)\)\=:E484/
     " Not a release version
     let g:TagHighlightPrivate['PluginVersion']['VersionInfo'] =

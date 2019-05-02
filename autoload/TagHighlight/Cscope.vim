@@ -11,19 +11,19 @@
 "            of this software.
 
 " ---------------------------------------------------------------------
-try
-  if &cp || v:version < 700 || (exists('g:loaded_TagHLCscope') && (g:plugin_development_mode != 1))
-    throw "Already loaded"
-  endif
-catch
+
+" If there is not support for 'cscope' or if it's not enabled, don't source
+" this file.
+if !exists('g:loaded_TagHighlight')
+      \ || !has('cscope')
+      \ || !TagHighlight#Option#GetOption('EnableCscope')
+      \ || (exists('g:loaded_TagHLCscope') && (g:plugin_development_mode != 1))
   finish
-endtry
+endif
+
 let g:loaded_TagHLCscope = 1
 
 function TagHighlight#Cscope#GetConnections()
-  if ! has("cscope")
-    return {}
-  endif
   let result = {}
 
   redir => connections
@@ -39,13 +39,11 @@ function TagHighlight#Cscope#GetConnections()
       let result[matches[1]] = matches[3]
     endif
   endfor
+
   return result
 endfunction
 
 function! TagHighlight#Cscope#RestoreConnections(connections)
-  if ! has("cscope")
-    return
-  endif
   for index in keys(a:connections)
     exe 'silent cs add' a:connections[index]
   endfor
@@ -53,12 +51,8 @@ endfunction
 
 let s:PausedConnections = {}
 function! TagHighlight#Cscope#PauseCscope()
-  if ! has("cscope")
-    return
-  endif
-  if ! TagHighlight#Option#GetOption('EnableCscope')
-    return
-  endif
+  " All of the checks for 'EnabledCscope' in this file are removed and are done
+  " at the top of this file
 
   let s:PausedConnections = TagHighlight#Cscope#GetConnections()
 
@@ -67,18 +61,13 @@ function! TagHighlight#Cscope#PauseCscope()
 endfunction
 
 function! TagHighlight#Cscope#ResumeCscope()
-  if ! has("cscope")
-    return
-  endif
-  if ! TagHighlight#Option#GetOption('EnableCscope')
-    return
-  endif
-
-  if has_key(b:TagHighlightPrivate, 'CscopeFileInfo') &&
-        \ b:TagHighlightPrivate['CscopeFileInfo']['Exists']
+  if has_key(
+        \ b:TagHighlightPrivate, 'CscopeFileInfo')
+        \ && b:TagHighlightPrivate['CscopeFileInfo']['Exists']
     exe 'silent cs add' b:TagHighlightPrivate['CscopeFileInfo']['FullPath']
   else
-    let b:TagHighlightPrivate['CscopeFileInfo'] = TagHighlight#Find#LocateFile('CSCOPE', '')
+    let b:TagHighlightPrivate['CscopeFileInfo'] =
+          \ TagHighlight#Find#LocateFile('CSCOPE', '')
     if b:TagHighlightPrivate['CscopeFileInfo']['Exists']
       exe 'silent cs add' b:TagHighlightPrivate['CscopeFileInfo']['FullPath']
     else
@@ -88,38 +77,27 @@ function! TagHighlight#Cscope#ResumeCscope()
 endfunction
 
 function! TagHighlight#Cscope#BufEnter()
-  if ! has("cscope")
-    return
-  endif
-  if ! TagHighlight#Option#GetOption('EnableCscope')
-    return
-  endif
-
   let b:TagHighlightPrivate['StoredCscopeConnections'] =
         \ TagHighlight#Cscope#GetConnections()
   " Kill all connections
   silent cs kill -1
 
-  if ! has_key(b:TagHighlightPrivate, 'CscopeFileInfo')
-    let b:TagHighlightPrivate['CscopeFileInfo'] = TagHighlight#Find#LocateFile('CSCOPE', '')
+  if !has_key(b:TagHighlightPrivate, 'CscopeFileInfo')
+    let b:TagHighlightPrivate['CscopeFileInfo'] =
+          \ TagHighlight#Find#LocateFile('CSCOPE', '')
   endif
 
   if b:TagHighlightPrivate['CscopeFileInfo']['Exists']
     exe 'silent cs add' b:TagHighlightPrivate['CscopeFileInfo']['FullPath']
   endif
 endfunction
-function! TagHighlight#Cscope#BufLeave()
-  if ! has("cscope")
-    return
-  endif
-  if ! TagHighlight#Option#GetOption('EnableCscope')
-    return
-  endif
 
+function! TagHighlight#Cscope#BufLeave()
   silent cs kill -1
   if has_key(b:TagHighlightPrivate, 'StoredCscopeConnections')
-    if len(b:TagHighlightPrivate['StoredCscopeConnections']) > 0
-      call TagHighlight#Cscope#RestoreConnections(b:TagHighlightPrivate['StoredCscopeConnections'])
+    if len(b:TagHighlightPrivate['StoredCscopeConnections'])
+      call TagHighlight#Cscope#RestoreConnections(
+            \ b:TagHighlightPrivate['StoredCscopeConnections'])
     endif
   endif
 endfunction
@@ -127,23 +105,24 @@ endfunction
 function! TagHighlight#Cscope#FindCscopeExe()
   " Find the cscope path
   let cscope_option = TagHighlight#Option#GetOption('CscopeExecutable')
-  if cscope_option == 'None'
-    if len(&cscopeprg) > 0
-      let cscope_option = &cscopeprg
-    else
-      let cscope_option = 'cscope'
-    endif
+  if cscope_option ==? 'None'
+    let cscope_options = len(&cscopeprg) ? &cscopeprg : 'cscope'
   endif
 
-  if cscope_option =~ '[\\/]'
+  if cscope_option =~? '[\\/]'
     " Option set and includes '/' or '\': must be explicit
     " path to named executable: just pass to mktypes
-    call TagHLDebug("CscopeExecutable set with path delimiter, using as explicit path", "Information")
+    call TagHLDebug(
+          \ 'CscopeExecutable set with path delimiter, using as explicit path',
+          \ 'Information')
     let b:TagHighlightSettings['CscopeExeFull'] = cscope_option
   else
     " Option set but doesn't include path separator: search
     " in the path
-    call TagHLDebug("CscopeExecutable set without path delimiter, searching in path", "Information")
-    let b:TagHighlightSettings['CscopeExeFull'] = TagHighlight#RunPythonScript#FindExeInPath(cscope_option)
+    call TagHLDebug(
+          \ 'CscopeExecutable set without path delimiter, searching in path',
+          \ 'Information')
+    let b:TagHighlightSettings['CscopeExeFull'] =
+          \ TagHighlight#RunPythonScript#FindExeInPath(cscope_option)
   endif
 endfunction

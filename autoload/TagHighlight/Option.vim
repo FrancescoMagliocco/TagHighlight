@@ -11,13 +11,11 @@
 "            of this software.
 
 " ---------------------------------------------------------------------
-try
-  if &cp || v:version < 700 || (exists('g:loaded_TagHLOption') && (g:plugin_development_mode != 1))
-    throw "Already loaded"
-  endif
-catch
+if !exists('g:loaded_TagHighlight') || (exists('g:loaded_TagHLOption')
+      \ && g:plugin_development_mode != 1)
   finish
-endtry
+endif
+
 let g:loaded_TagHLOption = 1
 
 let s:log_defaults = 1
@@ -27,13 +25,14 @@ function! TagHighlight#Option#LoadOptionFileIfPresent()
   let option_file = TagHighlight#Find#LocateFile('CONFIG', '')
 
   " Check whether we've found the option file
-  if ! option_file['Exists']
-    call TagHLDebug("No project config file", "Information")
+  if !option_file['Exists']
+    call TagHLDebug('No project config file', 'Information')
     return
   endif
 
   " Got an option file, load it in:
-  let b:TagHighlightConfigFileOptions = TagHighlight#LoadDataFile#LoadFile(option_file['FullPath'])
+  let b:TagHighlightConfigFileOptions =
+        \ TagHighlight#LoadDataFile#LoadFile(option_file['FullPath'])
 
   return option_file
 endfunction
@@ -43,20 +42,21 @@ function! TagHighlight#Option#LoadOptions()
     return
   endif
 
-  let g:TagHighlightPrivate['PluginOptions'] = []
+  let g:TagHighlightPrivate['PluginOptions']  = []
   let g:TagHighlightPrivate['FullOptionList'] = []
   let options = TagHighlight#LoadDataFile#LoadDataFile('options.txt')
 
   for option_dest in keys(options)
     if has_key(options[option_dest], 'PythonOnly')
-      if (options[option_dest]['PythonOnly'] == 'True') || (options[option_dest]['PythonOnly'] == 1)
+      if (options[option_dest]['PythonOnly'] ==? 'True')
+            \ || (options[option_dest]['PythonOnly'] == 1)
         " Skip this one
         continue
       endif
     else
       let option = deepcopy(options[option_dest])
       let option['Destination'] = option_dest
-      let g:TagHighlightPrivate['PluginOptions'] += [option]
+      let g:TagHighlightPrivate['PluginOptions']  += [option]
       let g:TagHighlightPrivate['FullOptionList'] += [option_dest]
     endif
   endfor
@@ -68,17 +68,14 @@ function! TagHighlight#Option#GetOption(name, ...)
   call TagHighlight#Option#LoadOptions()
 
   " Optional arguments
-  if len(a:000) > 0
-    let force_project = a:000[0]
-  else
-    let force_project = ''
-  endif
+  let force_project = a:0 ? a:1 : ''
 
   " Check this option exists
   let opt_index = index(g:TagHighlightPrivate['FullOptionList'], a:name)
   if opt_index < 0
-    throw "Unrecognised option:" .a:name
+    throw 'Unrecognised option:' . a:name
   endif
+
   let option = g:TagHighlightPrivate['PluginOptions'][opt_index]
 
   " Option priority (highest first):
@@ -86,101 +83,102 @@ function! TagHighlight#Option#GetOption(name, ...)
   " * buffer dictionary,
   " * config file dictionary
   " * global dictionary,
-  let option_priority = ["g:TagHighlightSettings","b:TagHighlightConfigFileOptions","b:TagHighlightSettings"]
-  if len(force_project) > 0
+  let option_priority = [
+        \ 'g:TagHighlightSettings',
+        \ 'b:TagHighlightConfigFileOptions',
+        \ 'b:TagHighlightSettings']
+  " I'm pretty sure the result of len() can't be less than zero..  If so, put
+  " back the > 0
+  if len(force_project)
     let project_options = TagHighlight#Projects#GetProject(force_project)
-    let option_priority = ["project_options"] + option_priority
+    let option_priority = ['project_options'] + option_priority
   endif
+  
   for var in option_priority
     if exists(var)
       exe 'let present = has_key(' . var . ', a:name)'
+      " There is an error here saying that 'present' isn't defined, but it is
+      " defined with the execute command above.
       if present
-        exe 'let opt = ' . var . '[a:name]'
+        exe 'let opt =' var . '[a:name]'
       endif
     endif
   endfor
 
-  if ! exists('opt')
+  if !exists('opt')
     " We haven't found it, return the default
     " Special cases first
-    if a:name == "DefaultDirModePriority"
-      if TagHighlight#Option#GetOption("Recurse")
-        let opt = ["Explicit","UpFromFile","CurrentDirectory"]
-      else
-        let opt = ["FileDirectory"]
-      endif
-    else
-      " Normal case
-      let opt = option['Default']
-    endif
-  else
+    let opt = a:name ==? 'DefaultDirModePriority'
+          \ ? TagHighlight#Option#GetOption('Recurse')
+          \   ? ['Explicit', 'UpFromFile', 'CurrentDirectory']
+          \   : ['FileDirectory']
+          \ : option['Default']
   endif
 
-  if option['Type'] =~ 'list'
+  if option['Type'] =~? 'list'
     let result = []
-    if type(opt) == type('')
-      if opt == '[]' || opt == ''
-        let parsed_opt = []
-      else
-        let parsed_opt = [opt]
-      endif
-    else
-      let parsed_opt = opt
-    endif
+    let parsed_opt = type(opt) == v:t_string
+          \ ? index(['[]', ''], opt) >= 0
+          \   ? []
+          \   : [opt]
+          \ : opt
     for part in parsed_opt
-      if part =~ '^OPT(\k\+)$'
+      if part =~? '^OPT(\k\+)$'
         let value_name = part[4:len(part)-2]
         let result += [TagHighlight#Option#GetOption(value_name)]
-      else
-        let result += [part]
+        continue
       endif
+
+      let result += [part]
     endfor
-  elseif option['Type'] == 'bool'
-    if opt =~ 'True' || opt == 1
+  elseif option['Type'] ==? 'bool'
+    if opt =~? 'True' || opt
       let result = 1
-    elseif opt =~ 'False' || opt == 0
+    elseif opt =~? 'False' || !opt
       let result = 0
     else
-      throw "Unrecognised bool value"
+      throw 'Unrecognised bool value'
     endif
-  elseif option['Type'] == 'string'
-    if opt =~ '^OPT(\k\+)$'
+  elseif option['Type'] ==? 'string'
+    if opt =~? '^OPT(\k\+)$'
       let value_name = opt[4:len(opt)-2]
       let result = TagHighlight#Option#GetOption(value_name)
     else
       let result = opt
     endif
-  elseif option['Type'] == 'dict'
+  elseif option['Type'] ==? 'dict'
     " This is a complex one: just assume it's valid Vim script
-    if type(opt) == type([])
-      " Probably a multi-entry dict that has automatically been
-      " split: rejoin
-      let result = eval(join(opt, ', '))
-    elseif type(opt) == type("")
-      let result = eval(opt)
-    else
-      let result = opt
-    endif
-  elseif option['Type'] == 'int'
+    let type = type(opt)
+    let result = type == v:t_list
+          \ ? eval(join(opt, ', '))
+          \ : type == v:t_string
+          \   ? eval(opt)
+          \   : opt
+  elseif option['Type'] ==? 'int'
     let result = str2nr(opt)
   endif
+
   return result
 endfunction
 
 function! TagHighlight#Option#CopyOptions()
   let result = {}
-  for var in ["g:TagHighlightSettings","b:TagHighlightConfigFileOptions","b:TagHighlightSettings"]
+  for var in [
+        \ 'g:TagHighlightSettings',
+        \ 'b:TagHighlightConfigFileOptions',
+        \ 'b:TagHighlightSettings']
     if exists(var)
       for key in keys(eval(var))
-        if type(eval(var)[key]) == type([])
-          let result[key] = eval(var)[key][:]
-        elseif type(eval(var)[key]) == type({})
-          let result[key] = deepcopy(eval(var)[key])
-        else
-          let result[key] = eval(var)[key]
-        endif
+        let type  = type(eval(var)[key])
+        let val   = eval(var)[key]
+        let result[key] = type == v:t_list
+              \ ? val[:]
+              \ : type == v:t_dict
+              \   ? deepcopy(val)
+              \   : val
       endfor
     endif
   endfor
+
   return result
 endfunction
