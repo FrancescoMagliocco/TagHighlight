@@ -12,34 +12,34 @@
 
 " ---------------------------------------------------------------------
 try
-	if &cp || v:version < 700 || (exists('g:loaded_TagHLVersion') && (g:plugin_development_mode != 1))
-		throw "Already loaded"
-	endif
+  if &cp || v:version < 700 || (exists('g:loaded_TagHLVersion') && (g:plugin_development_mode != 1))
+    throw "Already loaded"
+  endif
 catch
-	finish
+  finish
 endtry
 let g:loaded_TagHLVersion = 1
 
 function! TagHighlight#Version#LoadVersionInfo()
-	if has_key(g:TagHighlightPrivate, 'PluginVersion')
-		return
-	endif
+  if has_key(g:TagHighlightPrivate, 'PluginVersion')
+    return
+  endif
 
-	let g:TagHighlightPrivate['PluginVersion'] = {}
-	
-	let last_release_info = TagHighlight#LoadDataFile#LoadDataFile('release.txt')
-	let g:TagHighlightPrivate['PluginVersion']['LastRelease'] = last_release_info['release']
+  let g:TagHighlightPrivate['PluginVersion'] = {}
+  
+  let last_release_info = TagHighlight#LoadDataFile#LoadDataFile('release.txt')
+  let g:TagHighlightPrivate['PluginVersion']['LastRelease'] = last_release_info['release']
 
-	try
-		let release_version_info = TagHighlight#LoadDataFile#LoadDataFile('version_info.txt')
-		let g:TagHighlightPrivate['PluginVersion']['VersionInfo'] = release_version_info
-	catch /^Vim\%((\a\+)\)\=:E484/
-		" Not a release version
-		let g:TagHighlightPrivate['PluginVersion']['VersionInfo'] =
-					\ {
-					\    'release_clean': 'N/A',
-					\    'release_date': 'N/A',
-					\    'release_revid': 'N/A'
-					\ }
-	endtry
+  try
+    let release_version_info = TagHighlight#LoadDataFile#LoadDataFile('version_info.txt')
+    let g:TagHighlightPrivate['PluginVersion']['VersionInfo'] = release_version_info
+  catch /^Vim\%((\a\+)\)\=:E484/
+    " Not a release version
+    let g:TagHighlightPrivate['PluginVersion']['VersionInfo'] =
+          \ {
+          \    'release_clean': 'N/A',
+          \    'release_date': 'N/A',
+          \    'release_revid': 'N/A'
+          \ }
+  endtry
 endfunction

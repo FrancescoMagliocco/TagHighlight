@@ -12,43 +12,43 @@
 
 " ---------------------------------------------------------------------
 try
-	if &cp || v:version < 700 || (exists('g:loaded_TagHLTagManager') && (g:plugin_development_mode != 1))
-		throw "Already loaded"
-	endif
+  if &cp || v:version < 700 || (exists('g:loaded_TagHLTagManager') && (g:plugin_development_mode != 1))
+    throw "Already loaded"
+  endif
 catch
-	finish
+  finish
 endtry
 let g:loaded_TagHLTagManager = 1
 
 function! TagHighlight#TagManager#InitialiseBufferTags()
-	if ! has_key(g:TagHighlightPrivate, 'OriginalTagsSetting')
-		let g:TagHighlightPrivate['OriginalTagsSetting'] = &g:tags
-	endif
-	if ! exists('b:TagHighlightPrivate')
-		let b:TagHighlightPrivate = {}
-	endif
-	if ! has_key(b:TagHighlightPrivate, 'OriginalTagsSetting')
-		let b:TagHighlightPrivate['OriginalTagsSetting'] = &tags
-	endif
+  if ! has_key(g:TagHighlightPrivate, 'OriginalTagsSetting')
+    let g:TagHighlightPrivate['OriginalTagsSetting'] = &g:tags
+  endif
+  if ! exists('b:TagHighlightPrivate')
+    let b:TagHighlightPrivate = {}
+  endif
+  if ! has_key(b:TagHighlightPrivate, 'OriginalTagsSetting')
+    let b:TagHighlightPrivate['OriginalTagsSetting'] = &tags
+  endif
 endfunction
 
 function! TagHighlight#TagManager#ConfigureTags()
-	if TagHighlight#Option#GetOption('DisableTagManager') == 1
-		return
-	endif
-	let tagfilename = TagHighlight#Option#GetOption('TagFileName')
-	let tagfiles = []
-	for library in b:TagHighlightLoadedLibraries
-		let types_folder = fnamemodify(library['Path'], ':h')
-		let tag_file_path = types_folder . '/' . tagfilename
-		if filereadable(tag_file_path)
-			let tagfiles += [tag_file_path]
-		endif
-	endfor
+  if TagHighlight#Option#GetOption('DisableTagManager') == 1
+    return
+  endif
+  let tagfilename = TagHighlight#Option#GetOption('TagFileName')
+  let tagfiles = []
+  for library in b:TagHighlightLoadedLibraries
+    let types_folder = fnamemodify(library['Path'], ':h')
+    let tag_file_path = types_folder . '/' . tagfilename
+    if filereadable(tag_file_path)
+      let tagfiles += [tag_file_path]
+    endif
+  endfor
 
-	let newtagsoption = b:TagHighlightPrivate['OriginalTagsSetting']
-	for tagfile in tagfiles
-		let newtagsoption .= ',' . escape(tagfile, ' ')
-	endfor
-	let &l:tags = newtagsoption
+  let newtagsoption = b:TagHighlightPrivate['OriginalTagsSetting']
+  for tagfile in tagfiles
+    let newtagsoption .= ',' . escape(tagfile, ' ')
+  endfor
+  let &l:tags = newtagsoption
 endfunction

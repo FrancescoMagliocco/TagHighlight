@@ -12,35 +12,35 @@
 
 " ---------------------------------------------------------------------
 try
-	if &cp || v:version < 700 || (exists('g:loaded_TagHLUtilities') && (g:plugin_development_mode != 1))
-		throw "Already loaded"
-	endif
+  if &cp || v:version < 700 || (exists('g:loaded_TagHLUtilities') && (g:plugin_development_mode != 1))
+    throw "Already loaded"
+  endif
 catch
-	finish
+  finish
 endtry
 let g:loaded_TagHLUtilities = 1
 
 function! TagHighlight#Utilities#FileIsIn(file, root)
-	" Change to use forward slash paths
-	let full_path = substitute(fnamemodify(a:file, ':p'), '\\', '/', 'g')
-	let full_root = substitute(fnamemodify(a:root, ':p'), '\\', '/', 'g')
+  " Change to use forward slash paths
+  let full_path = substitute(fnamemodify(a:file, ':p'), '\\', '/', 'g')
+  let full_root = substitute(fnamemodify(a:root, ':p'), '\\', '/', 'g')
 
-	" Win32 isn't case sensitive, so make lower case
-	if has("win32")
-		let full_path = tolower(full_path)
-		let full_root = tolower(full_root)
-	endif
+  " Win32 isn't case sensitive, so make lower case
+  if has("win32")
+    let full_path = tolower(full_path)
+    let full_root = tolower(full_root)
+  endif
 
-	" Make sure root description doesn't end in / (unless it is the root
-	" folder)
-	while full_root =~ './$'
-		let full_root = full_root[:-2]
-	endwhile
+  " Make sure root description doesn't end in / (unless it is the root
+  " folder)
+  while full_root =~ './$'
+    let full_root = full_root[:-2]
+  endwhile
 
-	" Compare
-	if full_root == full_path[:len(full_root)-1]
-		return 1
-	else
-		return 0
-	endif
+  " Compare
+  if full_root == full_path[:len(full_root)-1]
+    return 1
+  else
+    return 0
+  endif
 endfunction
