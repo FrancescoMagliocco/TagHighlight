@@ -26,10 +26,8 @@ let g:loaded_TagHighlight = 1
 " Lets only do the TagHLDebug calls if Debug is on.
 let g:TagHighlight_Debug = get(g:, 'TagHighlight_Debug', 0)
 
-let old_versions = globpath(&rtp, 'plugin/ctags_highlighting.vim')
-
 " Any len that is non-zero will make true
-if len(old_versions)
+if len(globpath(&rtp, 'plugin/ctags_highlighting.vim'))
   echoerr 'Legacy ctags highlighter found.  This highlighter is'
         \ 'intended to replace ctags_highlighter.  See the'
         \ 'user documentation in doc/TagHighlight.txt for'
@@ -69,13 +67,14 @@ endif
 
 function! s:LoadLanguages()
   " This loads the language data files.
-  let language_files = split(glob(
-        \ g:TagHighlightPrivate['PluginPath'] . '/data/languages/*.txt'), '\n')
   let g:TagHighlightPrivate['ExtensionLookup']        = {}
   let g:TagHighlightPrivate['FileTypeLookup']         = {}
   let g:TagHighlightPrivate['SyntaxLookup']           = {}
   let g:TagHighlightPrivate['SpecialSyntaxHandlers']  = {}
-  for language_file in language_files
+  " Hopefully the order doesn't matter and the split(glob(.. HAS to be done
+  " before initializing some of the entries..
+  for language_file in split(glob(
+        \ g:TagHighlightPrivate['PluginPath'] . '/data/languages/*.txt'), '\n')
     let entries = TagHighlight#LoadDataFile#LoadFile(language_file)
     if has_key(entries, 'Suffix')
           \ && has_key(entries, 'VimExtensionMatcher') 
@@ -98,11 +97,10 @@ function! s:LoadLanguages()
     endif
 
     if has_key(entries, 'SpecialSyntaxHandlers')
-      let handlers = type(entries['SpecialSyntaxHandlers']) == v:t_list
-            \ ? entries['SpecialSyntaxHandlers']
-            \ : [entries['SpecialSyntaxHandlers']]
       let g:TagHighlightPrivate['SpecialSyntaxHandlers'][entries['Suffix']] =
-            \ handlers
+            \ type(entries['SpecialSyntaxHandlers']) == v:t_list
+            \   ? entries['SpecialSyntaxHandlers']
+            \   : [entries['SpecialSyntaxHandlers']]
     endif
   endfor
 endfunction
@@ -163,8 +161,7 @@ endfunction
 call s:LoadLanguages()
 call s:LoadKinds()
 
-let s:auto_config_files = split(globpath(&rtp, 'TagHLConfig.txt'), '\n')
-for f in s:auto_config_files
+for f in split(globpath(&rtp, 'TagHLConfig.txt'), '\n')
   call s:LoadTagHLConfig(f, 0)
 endfor
 
